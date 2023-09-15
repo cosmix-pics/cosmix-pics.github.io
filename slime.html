@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<head>
+  <title>slime vn</title>
+  <style>
+    * {
+      user-select: none;
+      font-family: monospace;
+      font-size: 18pt;
+    }
+    :root {
+      --n: 250;
+      --slime1: url(img/slimecrtA.png);
+      --slime2: url(img/slimecrtB.png);
+      --slime3: url(img/slimecrtC.png);
+      --slime4: url(img/slimecrtD.png);
+      --slime5: url(img/slimecrtE.png);
+    }
+    p,
+    div:has(> span) {
+      margin: 8pt 0;
+    }
+
+    span {
+      color: #0000;
+      background: linear-gradient(-90deg, black 0px, #0000 0) 10px 0,
+        linear-gradient(black 0 0) 0 0;
+      background-size: calc(var(--n) * 1ch) 200%;
+      -webkit-background-clip: padding-box, text;
+      background-clip: padding-box, text;
+      background-repeat: no-repeat;
+
+      animation: t calc(var(--n) * 0.025s) steps(var(--n)) forwards;
+    }
+    @keyframes t {
+      from {
+        background-size: 0 200%;
+      }
+    }
+    picture {
+      background: center/contain no-repeat var(--slime1);
+      opacity: 0;
+
+      width: 100vw;
+      height: 100vh;
+      position: fixed;
+      left: 0;
+      top: 0;
+      z-index: -1;
+    }
+    /* single time event class can be used in multiple spots but only once (once per route) */
+    picture:has(+ main > .reveal:not(:checked)) {
+      animation-name: revealing;
+      animation-duration: 2.5s;
+      opacity: 1;
+    }
+    @keyframes revealing {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+    picture:has(+ main > label > .shock:not(:checked)) {
+      animation: changeBgshock 0.5s forwards;
+      background-image: var(--slime5);
+    }
+    @keyframes changeBgshock {
+      0% {
+        top: -50px;
+      }
+      25% {
+        top: 100px;
+      }
+      50% {
+        top: -100px;
+      }
+      75% {
+        top: 50px;
+      }
+      100% {
+        top: 0px;
+      }
+    }
+    picture:has(+ main > div > .ass:not(:checked)) {
+      animation: changeBgass 1s forwards;
+      background-image: var(--slime4);
+    }
+    @keyframes changeBgass {
+      0% {
+        background-image: var(--slime5);
+      }
+      100% {
+        background-image: var(--slime4);
+      }
+    }
+    picture:has(+ main > div > .hide:not(:checked)) {
+      animation: changeBghide 1s forwards;
+    }
+    @keyframes changeBghide {
+      from {
+        opacity: 1;
+      }
+      to {
+        opacity: 0;
+      }
+    }
+    picture:has(+ main > div > label > .push:not(:checked)) {
+      animation: changeBgpush 2s forwards;
+      background-image: var(--slime3);
+    }
+    @keyframes changeBgpush {
+      0% {
+        background-image: var(--slime1);
+      }
+      100% {
+        background-image: var(--slime3);
+      }
+    }
+     picture:has(+ main > div > label > .pull:not(:checked)) {
+      animation: changeBgpull 2s forwards;
+      background-image: var(--slime2);
+    }
+    @keyframes changeBgpull {
+      0% {
+        background-image: var(--slime1);
+      }
+      100% {
+        background-image: var(--slime2);
+      }
+    }
+     picture:has(+ main > div > div > .ass2:not(:checked)) {
+      animation: changeBgass2 3s forwards;
+      background-image: var(--slime4);
+    }
+    @keyframes changeBgass2 {
+      0% {
+        background-image: var(--slime2);
+      }
+      15%{transform: scale(1);}
+      50%{transform: scale(1.5);}
+      100%{transform: scale(1);}
+      80% {background-image: var(--slime4);}
+    }
+    body {
+      background-color: black;
+    }
+    main {
+      background-color: Honeydew;
+      width: 560pt;
+      height: 100pt;
+      outline: ridge 4pt PaleGreen;
+      position: absolute;
+      top: 100vh;
+      left: 50%;
+      margin: -120pt 0 0 -300pt;
+      padding: 0 20pt;
+    }
+
+    .red {
+      background-color: red;
+    }
+    label {
+      background-color: lightgreen;
+    }
+    input:not(:checked) + div {
+      display: none;
+    }
+    input:checked + div + label + label + div {
+      display: none;
+    }
+    input:checked + div + input + div {
+      display: none;
+    }
+    input:checked + div + div {
+      display: none;
+    }
+    label:has(input:checked) + div + div {
+      display: none;
+    }
+    label:has(input:checked) + label + div + div + div {
+      display: none;
+    }
+    input:not(:checked) {
+      display: none;
+    }
+    label:has(input:not(:checked)) + div {
+      display: none;
+    }
+    label:has(input:not(:checked)) + label:has(input:checked) + div {
+      display: none;
+    }
+    input:checked + div + input {
+      display: none;
+    }
+    input:checked + div + label {
+      display: none;
+    }
+    input:checked + div + label + label {
+      display: none;
+    }
+    label:has(input:not(:checked)) + label {
+      display: none;
+    }
+    label:has(input:not(:checked)) {
+      display: none;
+    }
+    label:has(+ label input:not(:checked)) {
+      display: none;
+    }
+    input:not(label input) {
+      position: fixed;
+      overflow: hidden;
+      clip: rect(0 0 1 1);
+      height: 100vh;
+      width: 100vw;
+      appearance: none;
+    }
+    label {
+      width: 100pt;
+      position: absolute;
+      user-select: none;
+      text-align: center;
+      vertical-align: middle;
+      display: table-cell;
+      padding: 40pt 0;
+      font-weight: bold;
+    }
+    label:has(+ label) {
+      align: left;
+      left: 0;
+    }
+    label:hover {
+      background-color: darkgreen;
+    }
+    label + label {
+      align: right;
+      right: 0;
+    }
+    .red:hover {
+      background-color: darkred;
+    }
+
+    label + div {
+      text-align: center;
+      font-weight: bold;
+      vertical-align: middle;
+      display: table-cell;
+      width: 560pt;
+      height: 100pt;
+      padding: 0 100pt;
+    }
+    label input {
+      height: 0;
+      width: 0;
+    }
+    h1 {
+      display: none;
+    }
+    @-moz-document url-prefix() {
+      h1 {
+        display: block;
+        color: red;
+      }
+      main {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <picture></picture>
+  <main>
+    <input type="checkbox" checked /><div><p>Small demo of css visual novel</p></div>
+    <input type="checkbox" checked /><div><span>in a world!</span></div>
+    <input type="checkbox" checked class="reveal" /><div><span>where slime is alive. or something i dont fucking know.</span></div>
+    <input type="checkbox" checked /><div><span>meet slime girls!</span></div>
+    <input type="checkbox" checked /><div><span>look at this cutie, isnt she just making you all jello and gooi inside?</span></div>
+    <label><input type="checkbox" checked />yes</label>
+    <label class="red"><input type="checkbox" checked class="shock" />no</label>
+    <div>you do like slime girls right?</div>
+    <div>
+      <input type="checkbox" checked class="ass" /><div><span>WHAT!? what you mean no?</span></div>
+      <input type="checkbox" checked class="hide" /><div><span>well you fucked up my friend.</span></div>
+      <div><p>GAME OVER</p></div>
+    </div>
+    <div>
+      <input type="checkbox" checked /><div><span>you got that right, here come closer</span></div>
+      <label><input type="checkbox" checked class="pull"/>pull</label>
+      <label><input type="checkbox" checked class="push"/>push</label>
+      <div>what will you do to her?</div>
+      <div>
+       <input type="checkbox" checked /><div><span>you push her deeper in the puddle and end up half into it yourself</span></div>
+        <input type="checkbox" checked /><div><span>the soft slimy supstance feels rather warm to the touch</span></div>
+        <div><p>end of line</p></div>
+      </div>
+      <div>
+        <input type="checkbox" checked /><div><span>you pull her out the puddle</span></div>
+        <input type="checkbox" checked /><div><span>she seems to drip most of her mass off back into the puddle</span></div>
+        <input type="checkbox" checked class="ass2" /><div><span>after most her mass stablilizes she turns around</span></div>
+        <input type="checkbox" checked /><div><span>showing off her back too you</span></div>
+        <div><p>end of line</p></div>
+      </div>
+    </div>
+  </main>
+  <h1>
+    firefox currenty not supporting "has" therefore this game wont work properly
+  </h1>
+</body>
