@@ -14,8 +14,7 @@
 <body>
     <canvas id="screen" ></canvas>
     <script>
-
-      const canvas = document.getElementById("screen")
+const canvas = document.getElementById("screen")
 const ctx = canvas.getContext("2d")
 
 canvas.width = window.innerWidth
@@ -109,25 +108,27 @@ canvas.onmouseup = e =>{
         tempPoint.x = 0
         tempPoint.y=0
         tempPoint.selected=-1
-        let lastd = 5.0
-        let nearest = -1
-        for (let i = 0; i < anchors.length-1; i++) {
-            let d = dist(anchors[i][0],anchors[i][1],e.clientX,e.clientY)
-            if( d < snap && d < lastd && i != selected){
-                lastd = d
-                nearest = i
+        if(selected !=-1){
+            let lastd = 5.0
+            let nearest = -1
+            for (let i = 0; i < anchors.length-1; i++) {
+                let d = dist(anchors[i][0],anchors[i][1],e.clientX,e.clientY)
+                if( d < snap && d < lastd && i != selected){
+                    lastd = d
+                    nearest = i
+                }
+            }
+        
+            if(nearest !=-1){
+                for (let i = 0; i < lines.length; i++) {
+                    if(lines[i].start == selected){ lines[i].start= nearest}
+                    if(lines[i].end == selected){ lines[i].end= nearest}
+                    if(lines[i].start > selected){ lines[i].start--}
+                    if(lines[i].end > selected){ lines[i].end--}
+                }
+                anchors.splice(selected,1)
             }
         }
-        if(nearest !=-1){
-            for (let i = 0; i < lines.length; i++) {
-                if(lines[i].start == selected){ lines[i].start= nearest}
-                if(lines[i].end == selected){ lines[i].end= nearest}
-                if(lines[i].start > selected){ lines[i].start--}
-                if(lines[i].end > selected){ lines[i].end--}
-            }
-            anchors.splice(selected,1)
-        }
-       
     }
     if(e.button == 2){
         let lastd = 5.0
@@ -261,7 +262,6 @@ function loop(T){
     requestAnimationFrame(loop)
 }
 requestAnimationFrame(loop)
-      
     </script>
 </body>
 </html>
