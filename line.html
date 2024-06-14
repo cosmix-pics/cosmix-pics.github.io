@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>wire-test</title>
+    <style>
+        *{
+            margin: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="screen" ></canvas>
+    <script>
+
+      const canvas = document.getElementById("screen")
+const ctx = canvas.getContext("2d")
+
+canvas.width = window.innerWidth
+canvas.height = window.innerHeight
+
+ctx.lineWidth = 3
+
+const snap = 5
+const MaxSeg = 24
+let anchors =[]
+let selected = -1
+let lines =[]
+let tempPoint ={x:0,y:0,selected:-1,seg:0}
+
+let ctrl = false
+document.onkeydown=e=>{ ctrl=e.ctrlKey}
+document.onkeyup=e=>{ ctrl=e.ctrlKey}
+canvas.onmousedown=e=>{
+    selected = -1
+    let lastd = 5.0
+    let nearest = -1
+    for (let i = 0; i < anchors.length; i++) {
+        let d = dist(anchors[i][0],anchors[i][1],e.clientX,e.clientY)
+        if( d < snap && d < lastd){
+                lastd = d
+                nearest = i
+        }
+    }
+    if(e.buttons == 1){
+        if(nearest == -1){
+            
+            let point = {x:0,y:0,d:snap*2,i:-1,seg:-1}
+            for (let i = 0; i < lines.length; i++) {
+                if(inbounds(i,e.clientX,e.clientY)){
+                    
+                    let p = pspline(anchors[lines[i].start][0],anchors[lines[i].start][1],
+                                    lines[i].pole[0],lines[i].pole[1],
+                                    anchors[lines[i].end][0],anchors[lines[i].end][1],
+                                    lines[i].seg,e.clientX,e.clientY)
+                                    
+                    if(p.x !=-1){
+                        if(p.d < point.d){
+                            point.d = p.d
+                            point.x = p.x
+                            point.y = p.y
+                            point.i = i
+                            point.seg = p.seg
+                        }
+                    }
+                }
+            }
+            if(point.d < snap*2){
+                if(ctrl){
+                    lines[point.i].seg=1
+                }
+                else{
+                    tempPoint.x = point.x
+                    tempPoint.y = point.y
+                    tempPoint.selected = point.i
+                    tempPoint.seg = point.seg
+                    if(lines[point.i].seg == 1){
+                        lines[point.i].seg = MaxSeg
+                        lines[point.i].pole[0] = point.x
+                        lines[point.i].pole[1] = point.y
+                        tempPoint.seg = pspline(anchors[lines[point.i].start][0],anchors[lines[point.i].start][1],
+                            lines[point.i].pole[0],lines[point.i].pole[1],
+                            anchors[lines[point.i].end][0],anchors[lines[point.i].end][1],
+                            lines[point.i].seg,e.clientX,e.clientY).seg
+                    }
+                }
+            }
+        }
+        else{selected=nearest}
+    }
+    if(e.buttons == 2){
+        if(nearest == -1){
+            anchors.push([e.clientX,e.clientY],[e.clientX,e.clientY])
+            lines.push({start:anchors.length-2,end:anchors.length-1,seg:1,pole:[e.clientX,e.clientY]})
+            selected = anchors.length-1
+        }
+        else{
+            anchors.push([e.clientX,e.clientY])
+            lines.push({start:nearest,end:anchors.length-1,seg:1,pole:[e.clientX,e.clientY]})
+            selected = anchors.length-1
+        }
+    }
+}
+canvas.onmouseup = e =>{
+    
+    if(e.button == 0){
+        tempPoint.x = 0
+        tempPoint.y=0
+        tempPoint.selected=-1
+        let lastd = 5.0
+        let nearest = -1
+        for (let i = 0; i < anchors.length-1; i++) {
+            let d = dist(anchors[i][0],anchors[i][1],e.clientX,e.clientY)
+            if( d < snap && d < lastd && i != selected){
+                lastd = d
+                nearest = i
+            }
+        }
+        if(nearest !=-1){
+            for (let i = 0; i < lines.length; i++) {
+                if(lines[i].start == selected){ lines[i].start= nearest}
+                if(lines[i].end == selected){ lines[i].end= nearest}
+                if(lines[i].start > selected){ lines[i].start--}
+                if(lines[i].end > selected){ lines[i].end--}
+            }
+            anchors.splice(selected,1)
+        }
+       
+    }
+    if(e.button == 2){
+        let lastd = 5.0
+        let nearest = -1
+        for (let i = 0; i < anchors.length-1; i++) {
+            let d = dist(anchors[i][0],anchors[i][1],e.clientX,e.clientY)
+            if( d < 4 && d < lastd){
+                lastd = d
+                nearest = i
+            }
+        }
+        if(nearest !=-1){
+            lines[lines.length-1].end = nearest
+            anchors.pop()
+        }
+    }
+    selected = -1
+    for (let i = lines.length-1; i>=0; i--) {
+        if(lines[i].start == lines[i].end){
+            
+            lines.splice(i,1)
+        }
+    }
+}
+canvas.oncontextmenu = e =>{
+    e.preventDefault()
+}
+canvas.onmousemove = e=>{
+    if(e.buttons == 1){
+        if(selected !=-1){
+            anchors[selected][0] = e.clientX
+            anchors[selected][1] = e.clientY
+        }
+        else if(tempPoint.selected !=-1){
+        
+            for (let i = 0; i < 3; i++) {
+                tempPoint.x = interpolate(anchors[lines[tempPoint.selected].start][0],lines[tempPoint.selected].pole[0],anchors[lines[tempPoint.selected].end][0],tempPoint.seg)
+                tempPoint.y = interpolate(anchors[lines[tempPoint.selected].start][1],lines[tempPoint.selected].pole[1],anchors[lines[tempPoint.selected].end][1],tempPoint.seg)
+                let dd = dist(tempPoint.x,tempPoint.y,e.clientX,e.clientY)
+                
+                if(dd > 1){
+                    lines[tempPoint.selected].pole[0] += e.clientX-tempPoint.x 
+                    lines[tempPoint.selected].pole[1] += e.clientY-tempPoint.y 
+                }
+            }
+        }
+    }
+    if(e.buttons == 2){
+        anchors[selected][0] = e.clientX
+        anchors[selected][1] = e.clientY
+    }
+}
+function dist(x1,y1,x2,y2){
+    let a = x1-x2
+    let b = y1-y2
+    return Math.sqrt(a*a+b*b)
+}
+function inbounds(index,x,y){
+    let l = lines[index]
+    return x > Math.min(anchors[l.start][0],anchors[l.end][0],l.pole[0]) &&
+        y > Math.min(anchors[l.start][1],anchors[l.end][1],l.pole[1]) &&
+        x < Math.max(anchors[l.start][0],anchors[l.end][0],l.pole[0]) &&
+        y < Math.max(anchors[l.start][1],anchors[l.end][1],l.pole[1])
+}
+function interpolate(a, b, c, t){
+    let d = 1 - t
+    return a * d * d + b * t * d * 2 + c * t * t
+}
+function spline(x1,y1,x2,y2,x3,y3,iteration){
+    ctx.moveTo(x1,y1)
+	for(let i=0; i < iteration; i++){
+		t = i/iteration
+		a = 1/iteration
+		ctx.lineTo(interpolate(x1,x2,x3,t+a),interpolate(y1,y2,y3,t+a))
+    }
+}
+
+function closestPointOnLine( ax, ay, bx, by,px, py)
+{
+    const atob = { x: bx - ax, y: by - ay };
+    const atop = { x: px - ax, y: py - ay };
+    const len = (atob.x * atob.x) + (atob.y * atob.y);
+    let dot = (atop.x * atob.x) + (atop.y * atob.y);
+    const t = Math.min(1, Math.max(0, dot / len));
+
+    dot = ((bx - ax) * (py - ay)) - ((by - ay) * (px - ax));
+    
+    return { x: ax + (atob.x * t), y: ay + (atob.y * t) };
+}
+function pspline(x1,y1,x2,y2,x3,y3,iteration,mx,my){
+    let lastd = snap
+    let nearestX = -1
+    let nearestY = -1
+    let seg = -1
+	for(let i=0; i < iteration; i++){
+		t = i/iteration
+		a = 1/iteration
+        let p = closestPointOnLine(interpolate(x1,x2,x3,t),interpolate(y1,y2,y3,t),interpolate(x1,x2,x3,t+a),interpolate(y1,y2,y3,t+a),mx,my)
+		let d = dist(p.x,p.y,mx,my)
+        
+        if(d < lastd){
+            lastd = d
+            nearestX = p.x
+            nearestY = p.y
+            seg = t
+        }
+    }
+    return {x:nearestX,y:nearestY,d:lastd,seg:seg}
+}
+
+function loop(T){
+    ctx.clearRect(0,0,canvas.width,canvas.height)
+
+    ctx.beginPath();
+    ctx.arc(tempPoint.x, tempPoint.y, 5, 0, 2 * Math.PI);
+    ctx.stroke();
+
+
+    ctx.beginPath()
+    for (let i = 0; i < lines.length; i++) {
+        spline( anchors[lines[i].start][0],
+                anchors[lines[i].start][1],
+                lines[i].pole[0],
+                lines[i].pole[1],
+                anchors[lines[i].end][0],
+                anchors[lines[i].end][1],
+                lines[i].seg)
+    }
+    ctx.stroke()
+
+    requestAnimationFrame(loop)
+}
+requestAnimationFrame(loop)
+      
+    </script>
+</body>
+</html>
