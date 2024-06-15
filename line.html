@@ -315,7 +315,7 @@ function lineintersectiondevision(index)
                                 dist(interct.x,interct.y,anchors[lines[i].start][0],anchors[lines[i].start][1]) > snap &&
                                 dist(interct.x,interct.y,anchors[lines[i].end][0],anchors[lines[i].end][1]) > snap 
                             ){
-                                console.log("intersection detected")
+                                
                                 anchors.push([interct.x,interct.y])
                                 
                                 lines.push({start:anchors.length-1,end:lines[index].end,seg:lines[index].seg,pole:[lerp(lines[index].pole[0],anchors[lines[index].end][0],aa),lerp(lines[index].pole[1],anchors[lines[index].end][1],aa)]})//fix poles
