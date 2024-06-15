@@ -14,24 +14,27 @@
 <body>
     <canvas id="screen" ></canvas>
     <script>
-const canvas = document.getElementById("screen")
+	    const canvas = document.getElementById("screen")
 const ctx = canvas.getContext("2d")
-
 canvas.width = window.innerWidth
 canvas.height = window.innerHeight
-
 ctx.lineWidth = 3
-
 const snap = 5
 const MaxSeg = 24
 let anchors =[]
 let selected = -1
 let lines =[]
 let tempPoint ={x:0,y:0,selected:-1,seg:0}
-
 let ctrl = false
-document.onkeydown=e=>{ ctrl=e.ctrlKey}
-document.onkeyup=e=>{ ctrl=e.ctrlKey}
+let shift = false 
+document.onkeydown=e=>{ 
+    ctrl=e.ctrlKey
+    shift=e.shiftKey
+}
+document.onkeyup=e=>{
+    ctrl=e.ctrlKey
+    shift=e.shiftKey
+}
 canvas.onmousedown=e=>{
     selected = -1
     let lastd = 5.0
@@ -43,7 +46,7 @@ canvas.onmousedown=e=>{
                 nearest = i
         }
     }
-    if(e.buttons == 1){
+    if(e.buttons == 2){
         if(nearest == -1){
             
             let point = {x:0,y:0,d:snap*2,i:-1,seg:-1}
@@ -89,7 +92,7 @@ canvas.onmousedown=e=>{
         }
         else{selected=nearest}
     }
-    if(e.buttons == 2){
+    if(e.buttons == 1){
         if(nearest == -1){
             anchors.push([e.clientX,e.clientY],[e.clientX,e.clientY])
             lines.push({start:anchors.length-2,end:anchors.length-1,seg:1,pole:[e.clientX,e.clientY]})
@@ -104,7 +107,7 @@ canvas.onmousedown=e=>{
 }
 canvas.onmouseup = e =>{
     
-    if(e.button == 0){
+    if(e.button == 2){
         tempPoint.x = 0
         tempPoint.y=0
         tempPoint.selected=-1
@@ -130,7 +133,7 @@ canvas.onmouseup = e =>{
             }
         }
     }
-    if(e.button == 2){
+    if(e.button == 0){
         let lastd = 5.0
         let nearest = -1
         for (let i = 0; i < anchors.length-1; i++) {
@@ -152,15 +155,30 @@ canvas.onmouseup = e =>{
             lines.splice(i,1)
         }
     }
+    for (let i = 0; i < lines.length; i++) {
+        lineintersectiondevision(lines.length-1)
+    }
 }
 canvas.oncontextmenu = e =>{
     e.preventDefault()
 }
 canvas.onmousemove = e=>{
-    if(e.buttons == 1){
+    if(e.buttons == 2){
         if(selected !=-1){
-            anchors[selected][0] = e.clientX
-            anchors[selected][1] = e.clientY
+            if(shift){
+                for (let i = 0; i < lines.length; i++) {
+                    if(lines[i].start == selected){
+                        snapangle(e,lines[i].end)
+                    }
+                    else if(lines[i].end == selected){
+                        snapangle(e,lines[i].start)
+                    }
+                }
+            }
+            else{
+                anchors[selected][0] = e.clientX
+                anchors[selected][1] = e.clientY
+            }
         }
         else if(tempPoint.selected !=-1){
         
@@ -176,9 +194,12 @@ canvas.onmousemove = e=>{
             }
         }
     }
-    if(e.buttons == 2){
-        anchors[selected][0] = e.clientX
-        anchors[selected][1] = e.clientY
+    if(e.buttons == 1){
+        if(shift) snapangle(e,lines[lines.length-1].start)
+        else{
+            anchors[selected][0] = e.clientX
+            anchors[selected][1] = e.clientY
+        }
     }
 }
 function dist(x1,y1,x2,y2){
@@ -186,6 +207,21 @@ function dist(x1,y1,x2,y2){
     let b = y1-y2
     return Math.sqrt(a*a+b*b)
 }
+function torad (angle) {
+    return angle * (Math.PI / 180);
+  }
+function snapangle(e,s){
+    let x = anchors[s][0] - e.clientX
+    let y = anchors[s][1] - e.clientY
+    let d = dist(anchors[s][0],anchors[s][1],e.clientX,e.clientY)
+    let angle = (Math.atan2(y, x) * 180) / Math.PI;
+    angle+=22.5
+    angle = Math.floor(angle/45)*45
+    anchors[selected][0] = anchors[s][0] - (Math.cos(torad(angle))*d)
+    anchors[selected][1] = anchors[s][1] - (Math.sin(torad(angle))*d)
+}
+
+
 function inbounds(index,x,y){
     let l = lines[index]
     return x > Math.min(anchors[l.start][0],anchors[l.end][0],l.pole[0]) &&
@@ -193,10 +229,22 @@ function inbounds(index,x,y){
         x < Math.max(anchors[l.start][0],anchors[l.end][0],l.pole[0]) &&
         y < Math.max(anchors[l.start][1],anchors[l.end][1],l.pole[1])
 }
+function rectbounds(index1,index2){
+    let l1 = lines[index1]
+    let l2 = lines[index2]
+    return  Math.min(anchors[l1.start][0],anchors[l1.end][0],l1.pole[0]) < Math.max(anchors[l2.start][0],anchors[l2.end][0],l2.pole[0]) &&
+            Math.max(anchors[l1.start][0],anchors[l1.end][0],l1.pole[0]) > Math.min(anchors[l2.start][0],anchors[l2.end][0],l2.pole[0]) &&
+            Math.min(anchors[l1.start][1],anchors[l1.end][1],l1.pole[1]) < Math.max(anchors[l2.start][1],anchors[l2.end][1],l2.pole[1]) &&
+            Math.max(anchors[l1.start][1],anchors[l1.end][1],l1.pole[1]) > Math.min(anchors[l2.start][1],anchors[l2.end][1],l2.pole[1])
+}
 function interpolate(a, b, c, t){
     let d = 1 - t
     return a * d * d + b * t * d * 2 + c * t * t
 }
+function lerp(a, b, t) {
+	return a * (1 - t) + b * t;
+}
+
 function spline(x1,y1,x2,y2,x3,y3,iteration){
     ctx.moveTo(x1,y1)
 	for(let i=0; i < iteration; i++){
@@ -238,6 +286,72 @@ function pspline(x1,y1,x2,y2,x3,y3,iteration,mx,my){
     }
     return {x:nearestX,y:nearestY,d:lastd,seg:seg}
 }
+
+function lineintersectiondevision(index)
+{
+    for (let i = lines.length-1; i>=0; i--) {
+        if(i != index){
+            if(rectbounds(index,i)){
+                for (let a = 0; a < lines[index].seg; a++) {
+                    for (let b = 0; b < lines[i].seg; b++) {
+                        let aa = a/lines[index].seg
+                        let bb = b/lines[i].seg
+                        let at = 1/lines[index].seg
+                        let bt = 1/lines[i].seg
+                        
+                        let interct = intersect(
+                            interpolate(anchors[lines[index].start][0],lines[index].pole[0],anchors[lines[index].end][0],aa),
+                            interpolate(anchors[lines[index].start][1],lines[index].pole[1],anchors[lines[index].end][1],aa),
+                            interpolate(anchors[lines[index].start][0],lines[index].pole[0],anchors[lines[index].end][0],aa+at),
+                            interpolate(anchors[lines[index].start][1],lines[index].pole[1],anchors[lines[index].end][1],aa+at),
+
+                            interpolate(anchors[lines[i].start][0],lines[i].pole[0],anchors[lines[i].end][0],bb),
+                            interpolate(anchors[lines[i].start][1],lines[i].pole[1],anchors[lines[i].end][1],bb),
+                            interpolate(anchors[lines[i].start][0],lines[i].pole[0],anchors[lines[i].end][0],bb+bt),
+                            interpolate(anchors[lines[i].start][1],lines[i].pole[1],anchors[lines[i].end][1],bb+bt))
+                        if(interct != null){
+                            if( dist(interct.x,interct.y,anchors[lines[index].start][0],anchors[lines[index].start][1]) > snap &&
+                                dist(interct.x,interct.y,anchors[lines[index].end][0],anchors[lines[index].end][1]) > snap &&
+                                dist(interct.x,interct.y,anchors[lines[i].start][0],anchors[lines[i].start][1]) > snap &&
+                                dist(interct.x,interct.y,anchors[lines[i].end][0],anchors[lines[i].end][1]) > snap 
+                            ){
+                                console.log("intersection detected")
+                                anchors.push([interct.x,interct.y])
+                                
+                                lines.push({start:anchors.length-1,end:lines[index].end,seg:lines[index].seg,pole:[lerp(lines[index].pole[0],anchors[lines[index].end][0],aa),lerp(lines[index].pole[1],anchors[lines[index].end][1],aa)]})//fix poles
+                                lines.push({start:anchors.length-1,end:lines[i].end,seg:lines[i].seg,pole:[lerp(lines[i].pole[0],anchors[lines[i].end][0],bb),lerp(lines[i].pole[1],anchors[lines[i].end][1],bb)]})//fix poles
+                                lines[index].end = anchors.length-1
+                                lines[index].pole[0] = lerp(anchors[lines[index].start][0],lines[index].pole[0],aa)
+                                lines[index].pole[1] = lerp(anchors[lines[index].start][1],lines[index].pole[1],aa)
+                                lines[i].end = anchors.length-1
+                                lines[i].pole[0] = lerp(anchors[lines[i].start][0],lines[i].pole[0],bb)
+                                lines[i].pole[1] = lerp(anchors[lines[i].start][1],lines[i].pole[1],bb)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+function intersect(x1, y1, x2, y2, x3, y3, x4, y4) {
+      if ((x1 === x2 && y1 === y2) || (x3 === x4 && y3 === y4)) {
+          return null
+      }
+      denominator = ((y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1))
+      if (denominator === 0) {
+          return null
+      }
+      let ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / denominator
+      let ub = ((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)) / denominator
+      if (ua < 0 || ua > 1 || ub < 0 || ub > 1) {
+          return null
+      }
+      let x = x1 + ua * (x2 - x1)
+      let y = y1 + ua * (y2 - y1)
+      return {x, y}
+  }
+
 
 function loop(T){
     ctx.clearRect(0,0,canvas.width,canvas.height)
