@@ -1,10 +1,21 @@
 {
   "name": "audiobook shelf",
   "short_name": "audiobook",
+  "description": "a simple audiobook shelf",
+  "categories": ["books", "entertainment"],
+  "orientation": "natural",
+  "id": "https://cosmix.pics/audiobookshelf/",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#000000",
+  "screenshots": [
+  {
+    "src": "screenshot.webp",
+    "sizes": "891x1037",
+    "type": "image/webp"
+  }
+],
   "icons": [
     {
       "src": "icon-192x192.png",
@@ -19,4 +30,5 @@
   ]
 
 }
+
 
