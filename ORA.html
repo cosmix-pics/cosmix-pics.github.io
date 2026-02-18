@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>OBS ORA</title>
+<style>
+body{font-family:'Segoe UI',sans-serif;background:transparent;color:#fff;margin:0;overflow:hidden;height:100vh}
+#ui{background:rgba(0,0,0,0.9);padding:10px;border-radius:0 0 10px 0;position:absolute;top:0;left:0;z-index:99;max-width:300px;border:1px solid #444;transition:opacity 0.2s}
+#ui.min{opacity:0;pointer-events:none}
+#stg{width:100vw;height:100vh;display:flex;justify-content:center;align-items:flex-end}
+svg{max-height:100%;width:auto;filter:drop-shadow(0 0 5px rgba(0,0,0,0.5))}
+.row{margin-bottom:6px;display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+button{background:#444;color:#fff;border:1px solid #666;cursor:pointer;padding:4px 8px;font-size:11px;border-radius:3px}
+button:hover{background:#666}
+button.act{background:#00d2ff;color:#000}
+button.red{background:#833;border-color:#f55}
+label{font-size:10px;color:#bbb;width:100%;display:block}
+input[type=range]{width:70px;height:4px;accent-color:#00d2ff}
+.msg{font-size:10px;font-weight:bold;margin-top:4px;padding:4px;border-radius:2px}
+.err{color:#f88;background:#300;border-left:2px solid #f00}
+.ok{color:#8f8}
+.flags{font-family:monospace;font-size:9px;color:#aaa;background:#222;padding:4px;border:1px solid #444;word-break:break-all;user-select:all;margin-top:5px}
+</style>
+</head>
+<body>
+
+<div id="ui">
+ <div class="row">
+  <strong style="color:#00d2ff;font-size:12px;margin-right:auto">OBS PUPPET</strong>
+  <button onclick="togUI()">Hide UI</button>
+ </div>
+ <div class="row"><input type="file" id="inp" accept=".ora" style="font-size:10px;width:100%"></div>
+ <div class="row">
+  <button id="mic">START MIC</button>
+  <button class="red" onclick="reset()">RESET</button>
+ </div>
+ <div id="msg"></div>
+ <div class="row" style="margin-top:8px;border-top:1px solid #444;padding-top:4px">
+  <div><label>Thresh</label><input type="range" id="r_th" min="1" max="50"></div>
+  <div><label>Sway</label><input type="range" id="r_sw" min="0" max="100"></div>
+  <div><label>Bob</label><input type="range" id="r_bb" min="0" max="100"></div>
+ </div>
+ <div class="row" id="c_btns"></div>
+ <div style="font-size:9px;color:#666;margin-top:4px">Dbl-Click BG to Toggle UI</div>
+ <div class="flags">FLAGS: --enable-media-stream --use-fake-ui-for-media-stream --allow-file-access-from-files --autoplay-policy=no-user-gesture-required</div>
+</div>
+
+<div id="stg"></div>
+
+<script>
+const $=i=>document.getElementById(i)
+const stg=$('stg'), ui=$('ui')
+let AC, AN, dat, files={}, root, pvt=[], eyes={o:[],c:[]}, mth={o:[],c:[]}
+let cfg={th:0.05, sw:1, bb:1, vol:0, smth:0, tlk:0, cst:-1, vis:1}
+let tm=0, nxtB=0, isB=0, isT=0, run=0, db=null
+
+window.onload=async()=>{
+ let s=JSON.parse(localStorage.getItem('ora_cfg'))
+ if(s){ 
+  cfg.th=s.th; $('r_th').value=s.th*100
+  cfg.sw=s.sw; $('r_sw').value=s.sw*30
+  cfg.bb=s.bb; $('r_bb').value=s.bb
+  cfg.cst=s.cst; cfg.vis=s.vis
+  if(!cfg.vis) ui.classList.add('min')
+ } else {
+  $('r_th').value=10; $('r_sw').value=30; $('r_bb').value=50
+ }
+ 
+ await initDB()
+ let b=await getFile()
+ if(b){ msg("Restoring...",1); proc(b) }
+ startMic(1)
+}
+
+document.body.ondblclick=e=>{ if(e.target==document.body||e.target==stg) togUI() }
+function togUI(){ 
+ ui.classList.toggle('min'); cfg.vis=!ui.classList.contains('min'); save() 
+}
+
+const save=()=>localStorage.setItem('ora_cfg',JSON.stringify({th:cfg.th, sw:cfg.sw, bb:cfg.bb, cst:cfg.cst, vis:cfg.vis}))
+$('r_th').oninput=e=>{ cfg.th=e.target.value/100; save() }
+$('r_sw').oninput=e=>{ cfg.sw=e.target.value/30; save() }
+$('r_bb').oninput=e=>{ cfg.bb=e.target.value; save() }
+$('inp').onchange=e=>{ if(e.target.files[0]){ proc(e.target.files[0]); putFile(e.target.files[0]) } }
+$('mic').onclick=()=>startMic(0)
+const msg=(t,ok)=>$('msg').innerHTML=`<div class="msg ${ok?'ok':'err'}">${t}</div>`
+
+async function startMic(au){
+ try{
+  let s=null
+  if(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia) try{s=await navigator.mediaDevices.getUserMedia({audio:true})}catch(e){}
+  if(!s&&(navigator.webkitGetUserMedia||navigator.mozGetUserMedia)){
+    s=await new Promise((r,j)=>(navigator.webkitGetUserMedia||navigator.mozGetUserMedia).call(navigator,{audio:true},r,j))
+  }
+  if(!s) throw new Error("No Mic API")
+  AC=new(window.AudioContext||window.webkitAudioContext)()
+  AN=AC.createAnalyser(); AN.fftSize=512; AN.smoothingTimeConstant=0.3
+  AC.createMediaStreamSource(s).connect(AN)
+  dat=new Uint8Array(AN.frequencyBinCount)
+  if(AC.state==='suspended') await AC.resume()
+  $('mic').style.background='#28a745'; $('mic').innerText="MIC ON"
+  if(!au) msg("Mic Connected",1)
+  if(!run) loop()
+ }catch(e){ if(!au) msg("Mic Failed. Check Flags.",0) }
+}
+
+async function proc(b){
+ try{
+  files=await unzip(await b.arrayBuffer())
+  if(!files['stack.xml']) throw new Error("Bad ORA")
+  build(new DOMParser().parseFromString(await files['stack.xml'].text(),"text/xml"))
+  msg("Ready",1)
+ }catch(e){ msg(e.message,0) }
+}
+
+async function build(doc){
+ stg.innerHTML='', $('c_btns').innerHTML=''
+ eyes={o:[],c:[]}, mth={o:[],c:[]}, pvt=[]
+ let img=doc.getElementsByTagName('image')[0]
+ let svg=document.createElementNS("http://www.w3.org/2000/svg","svg")
+ svg.setAttribute("viewBox",`0 0 ${img.getAttribute('w')} ${img.getAttribute('h')}`)
+ root=document.createElementNS("http://www.w3.org/2000/svg","g")
+ svg.append(root)
+
+ let nodes=[], pvC={}, cSet=new Set()
+ const trav=n=>{
+  let ch=Array.from(n.children)
+  for(let i=ch.length-1;i>=0;i--) ch[i].tagName=='stack'?trav(ch[i]):ch[i].tagName=='layer'&&nodes.push(ch[i])
+ }
+ trav(img)
+
+ nodes.forEach(n=>{
+  let nm=(n.getAttribute('name')||"").toLowerCase()
+  if(nm.startsWith('pivot_')) pvC[nm.replace('pivot_','').trim()]={x:+n.getAttribute('x')||0, y:+n.getAttribute('y')||0}
+  let cm=nm.match(/^c(\d)[_\s]/); if(cm)cSet.add(cm[1])
+ })
+
+ for(let n of nodes){
+  let nm=(n.getAttribute('name')||"").toLowerCase(), src=n.getAttribute('src')
+  if(nm.startsWith('pivot_')||!files[src])continue
+  let el=document.createElementNS("http://www.w3.org/2000/svg","image")
+  let u=URL.createObjectURL(files[src])
+  el.setAttribute('href',u); el.setAttribute('x',n.getAttribute('x')||0); el.setAttribute('y',n.getAttribute('y')||0)
+  let ti=new Image(); ti.src=u; await new Promise(r=>ti.onload=r)
+  el.setAttribute('width',ti.width); el.setAttribute('height',ti.height)
+  
+  let cm=nm.match(/^c(\d)[_\s]/); el.dataset.c=cm?cm[1]:'all'
+  if(nm.includes('eye')) nm.includes('close')?eyes.c.push(el):eyes.o.push(el)
+  if(nm.includes('mouth')) nm.includes('close')?mth.c.push(el):mth.o.push(el)
+  if(pvC[nm]){
+   el.style.transformBox="view-box"; el.style.transformOrigin=`${pvC[nm].x}px ${pvC[nm].y}px`
+   pvt.push({el, sp:1+Math.random(), off:Math.random()*10})
+  }
+  root.append(el)
+ }
+ Array.from(cSet).sort().forEach(id=>{
+  let b=document.createElement('button')
+  b.innerText='C'+id; b.onclick=()=>{cfg.cst=id; save(); setC(id)}
+  $('c_btns').append(b)
+ })
+ setC(cfg.cst!=-1?cfg.cst:(cSet.size>0?Array.from(cSet).sort()[0]:'all'))
+ stg.append(svg)
+}
+
+function setC(id){
+ if(!root)return
+ root.querySelectorAll('image').forEach(e=>{
+  e.style.display=(e.dataset.c=='all'||e.dataset.c==id)?'block':'none'
+ })
+ Array.from($('c_btns').children).forEach(b=>b.classList.toggle('act',b.innerText=='C'+id))
+}
+
+function initDB(){
+ return new Promise((r,j)=>{
+  let q=indexedDB.open("OraDB",1)
+  q.onupgradeneeded=e=>e.target.result.createObjectStore("f")
+  q.onsuccess=e=>{db=e.target.result;r()}; q.onerror=j
+ })
+}
+function putFile(b){ if(db) db.transaction(["f"],"readwrite").objectStore("f").put(b,"last") }
+function getFile(){ return new Promise(r=>{ if(!db)return r(0); let q=db.transaction(["f"]).objectStore("f").get("last"); q.onsuccess=()=>r(q.result); q.onerror=()=>r(0) }) }
+function reset(){ localStorage.removeItem('ora_cfg'); if(db) db.transaction(["f"],"readwrite").objectStore("f").clear(); location.reload() }
+
+function loop(ts){
+ run=1
+ if(AN){ AN.getByteFrequencyData(dat); let s=0; for(let i=5;i<50;i++)s+=dat[i]; cfg.vol=(s/45)/255 }
+ let now=cfg.vol>cfg.th
+ cfg.tlk+=( (now?1:0)-cfg.tlk)*0.1; cfg.smth+=(cfg.vol-cfg.smth)*0.2
+ const ok=e=>e.dataset.c=='all'||e.dataset.c==cfg.cst
+ 
+ if(now!=isT){
+  isT=now; mth.o.forEach(e=>e.style.display=isT&&ok(e)?'block':'none'); mth.c.forEach(e=>e.style.display=!isT&&ok(e)?'block':'none')
+ } else {
+  mth.o.forEach(e=>e.style.display=isT&&ok(e)?'block':'none'); mth.c.forEach(e=>e.style.display=!isT&&ok(e)?'block':'none')
+ }
+ 
+ if(!isB&&ts>nxtB){
+  isB=1; eyes.o.forEach(e=>ok(e)&&(e.style.display='none')); eyes.c.forEach(e=>ok(e)&&(e.style.display='block'))
+  setTimeout(()=>{
+   isB=0; eyes.o.forEach(e=>ok(e)&&(e.style.display='block')); eyes.c.forEach(e=>ok(e)&&(e.style.display='none'))
+   nxtB=ts+2000+Math.random()*3000
+  },150)
+ }
+ let t=ts/1000
+ pvt.forEach(p=>{
+  let b=Math.sin((t*p.sp)+p.off)*2*cfg.sw, tk=Math.sin((t*p.sp*3)+p.off)*(5*cfg.sw)*cfg.tlk
+  p.el.style.transform=`rotate(${b+tk}deg)`
+ })
+ if(root) root.style.transform=`translate(0,-${cfg.smth*50*cfg.bb}px)`
+ requestAnimationFrame(loop)
+}
+
+async function unzip(b){
+ let v=new DataView(b),o=0,f={},td=new TextDecoder()
+ while(o<v.byteLength){
+  if(v.getUint32(o,1)!=0x04034b50)break
+  let m=v.getUint16(o+8,1),cs=v.getUint32(o+18,1),nl=v.getUint16(o+26,1),xl=v.getUint16(o+28,1)
+  let n=td.decode(new Uint8Array(b,o+30,nl)), raw=new Uint8Array(b,o+30+nl+xl,cs)
+  if(m==0)f[n]=new Blob([raw])
+  else if(m==8) f[n]=await new Response(new Blob([raw]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).blob()
+  o+=30+nl+xl+cs
+ }
+ return f
+}
+</script></body></html>
