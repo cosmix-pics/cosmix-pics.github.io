@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup OBS ORA Puppet</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: Tahoma, sans-serif;
+            line-height: 1.5;
+        }
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 0px 24px;
+        }
+        header {
+            text-align: center;
+        }
+        h1 {
+            font-size: 32px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            margin-bottom: 8px;
+        }
+        h2 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-top: 50px;
+            margin-bottom: 16px;
+            color: #000;
+        }
+        h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #000;
+        }
+        p {
+            margin-bottom: 16px;
+            font-size: 16px;
+        }
+        ol {
+            padding-left: 20px;
+            margin-bottom: 24px;
+        }
+        li {
+            margin-bottom: 12px;
+        }
+        
+        /* Code Box Styling */
+        .code-container {
+            position: relative;
+            background: #f5f5f7;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 20px 0;
+            border: 1px solid #e5e5e5;
+        }
+        code {
+            font-family: "SF Mono", "Segoe UI Mono", "Roboto Mono", Menlo, Courier, monospace;
+            font-size: 13px;
+            color: #333;
+            word-break: break-all;
+            display: block;
+            padding-right: 60px;
+        }
+        .copy-btn {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: #ffffff;
+            border: 1px solid #d2d2d7;
+            padding: 4px 8px;
+            font-size: 11px;
+            font-weight: 500;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .copy-btn:hover {
+            background: #0071e3;
+            color: #fff;
+            border-color: #0071e3;
+        }
+
+        .hint {
+            font-size: 14px;
+            color: #888;
+            margin-top: -10px;
+            margin-bottom: 20px;
+        }
+
+        kbd {
+            background: #f5f5f7;
+            border: 1px solid #d2d2d7;
+            border-radius: 3px;
+            padding: 1px 4px;
+            font-size: 13px;
+            font-family: inherit;
+        }
+
+        footer {
+            margin-top: 100px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            font-size: 13px;
+            color: #999;
+            text-align: center;
+        }
+
+       
+    </style>
+</head>
+<body>
+    <header>
+        <img src="img/header.png" alt="Comsix" width="200">
+        <br>
+        
+          <a href="https://mastodon.art/@Cosmix">mastodon</a>
+          <a href="https://github.com/cosmix-pics">github</a>
+          <a href="index.html">images</a>
+          <a href="about.html">about</a>
+    </header>
+      
+<div class="container">
+
+        <h1>OBS ORA puppet</h1>
+        <p>a neat PNGtuber-like avatar to puppeteer in OBS using the OpenRaster format</p>
+        <h2>installation</h2>
+        <h3>add flag (windows)</h3>
+        <ol>
+            <li>right-click your OBS Desktop shortcut and select <strong>Properties</strong>.</li>
+            <li>locate the <strong>Target</strong> field.</li>
+            <li>add a <strong>space</strong> at the end, then paste the flag below:</li>
+        
+        
+        <div class="code-container">
+            <code id="code-flags">--enable-media-stream</code>
+            <button class="copy-btn" onclick="copyText('code-flags')">Copy</button>
+        </div>
+        <p class="hint">the result should look like: <code>"C:\Program Files\obs-studio\bin\64bit\obs64.exe" --enable-media-stream</code></p>
+        </ol>
+
+        <h3>add controls</h3>
+        <ol>
+        <li>run OBS.</li>
+        <li>navigate to <kbd>View</kbd> → <kbd>Docks</kbd> → <kbd>Custom Browser Docks...</kbd></li>
+        <li>set <strong>Dock Name</strong> to something like <kbd>ORA Puppet</kbd>.</li>
+        <li>paste the following <strong>URL</strong>:</li>
+        <div class="code-container">
+            <code id="code-dock">https://cosmix.pics/ORA?control=1</code>
+            <button class="copy-btn" onclick="copyText('code-dock')">Copy</button>
+        </div>
+        <li>click <strong>Apply</strong>, then dock the window anywhere you want</li>
+        <li>in <strong>Sources</strong> panel, click <kbd>+</kbd> then <kbd>Browser</kbd>.</li>
+        <li>Set the <strong>URL</strong> to:</li>
+        <div class="code-container">
+            <code id="code-source">https://cosmix.pics/ORA</code>
+            <button class="copy-btn" onclick="copyText('code-source')">Copy</button>
+        </div>
+        <li>Set Width and Height to prefrence, example <kbd>1900 x 1080</kbd></li>
+        </ol>
+    
+    <h3>try out one of these ORA files</h3>
+    <a href="img/bot.ora">bot.ora</a><br>
+    <a href="img/fur.ora">fur.ora</a>
+    <footer>Cosmix.pics</footer>
+</div>
+
+<script>
+    function copyText(id) {
+        const text = document.getElementById(id).innerText.trim();
+        navigator.clipboard.writeText(text).then(() => {
+            const btn = document.querySelector(`#${id} + .copy-btn`);
+            const originalText = btn.innerText;
+            btn.innerText = "Copied";
+            btn.style.color = "#0071e3";
+            
+            setTimeout(() => {
+                btn.innerText = originalText;
+                btn.style.color = "";
+            }, 2000);
+        });
+    }
+</script>
+
+</body>
+</html>
