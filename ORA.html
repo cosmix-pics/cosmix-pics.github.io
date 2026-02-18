@@ -2,224 +2,277 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>OBS ORA</title>
+<title>ORA Puppet</title>
 <style>
-body{font-family:'Segoe UI',sans-serif;background:transparent;color:#fff;margin:0;overflow:hidden;height:100vh}
-#ui{background:rgba(0,0,0,0.9);padding:10px;border-radius:0 0 10px 0;position:absolute;top:0;left:0;z-index:99;max-width:300px;border:1px solid #444;transition:opacity 0.2s}
-#ui.min{opacity:0;pointer-events:none}
-#stg{width:100vw;height:100vh;display:flex;justify-content:center;align-items:flex-end}
-svg{max-height:100%;width:auto;filter:drop-shadow(0 0 5px rgba(0,0,0,0.5))}
-.row{margin-bottom:6px;display:flex;gap:5px;flex-wrap:wrap;align-items:center}
-button{background:#444;color:#fff;border:1px solid #666;cursor:pointer;padding:4px 8px;font-size:11px;border-radius:3px}
-button:hover{background:#666}
-button.act{background:#00d2ff;color:#000}
-button.red{background:#833;border-color:#f55}
-label{font-size:10px;color:#bbb;width:100%;display:block}
-input[type=range]{width:70px;height:4px;accent-color:#00d2ff}
-.msg{font-size:10px;font-weight:bold;margin-top:4px;padding:4px;border-radius:2px}
-.err{color:#f88;background:#300;border-left:2px solid #f00}
-.ok{color:#8f8}
-.flags{font-family:monospace;font-size:9px;color:#aaa;background:#222;padding:4px;border:1px solid #444;word-break:break-all;user-select:all;margin-top:5px}
+:root[data-theme='dark']{--bg:#16171a;--pnl:#2b2e38;--fg:#ddd;--ac:#3f8dbf;--brd:#404040}
+:root[data-theme='grey']{--bg:#333;--pnl:#444;--fg:#eee;--ac:#666;--brd:#555}
+:root[data-theme='light']{--bg:#eee;--pnl:#fff;--fg:#222;--ac:#007bff;--brd:#ccc}
+:root[data-theme='blue']{--bg:#051121;--pnl:#0a1f3d;--fg:#e0e8f0;--ac:#1a73e8;--brd:#1a3a5a}
+body{font-family:'Segoe UI',sans-serif;margin:0;overflow:hidden;background:transparent;color:var(--fg);user-select:none}
+.hide{display:none!important}
+#stg{width:100vw;height:100vh;display:flex;justify-content:center;align-items:flex-end;pointer-events:none}
+svg{width:auto;height:auto;max-width:100%;max-height:100%;display:block;filter:drop-shadow(0 2px 8px rgba(0,0,0,0.3))}
+#ctrl{background:var(--bg);height:100vh;display:flex;flex-direction:column;font-size:12px}
+.head{background:var(--pnl);padding:8px;border-bottom:1px solid var(--brd);display:flex;justify-content:space-between;align-items:center}
+.head h2{margin:0;font-size:12px;font-weight:600}
+.scroll{padding:10px;overflow-y:auto;flex:1}
+.sect{background:var(--pnl);border:1px solid var(--brd);border-radius:4px;padding:8px;margin-bottom:10px}
+.lbl{font-size:9px;text-transform:uppercase;color:#888;margin-bottom:4px;display:block;font-weight:700}
+.row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+input[type=range]{flex:1;height:4px;accent-color:var(--ac)}
+select,button{background:#444;border:1px solid var(--brd);color:#fff;padding:4px 8px;border-radius:3px;cursor:pointer;font-size:11px}
+[data-theme='light'] button,[data-theme='light'] select{background:#ddd;color:#222}
+button:hover{filter:brightness(1.2)}
+button.act{background:var(--ac);color:#fff;border-color:transparent}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(70px,1fr));gap:6px}
+.card{background:#000;border:1px solid var(--brd);border-radius:4px;cursor:pointer;overflow:hidden;position:relative}
+.card.sel{border-color:var(--ac);outline:1px solid var(--ac)}
+.thumb{width:100%;aspect-ratio:1;object-fit:contain;display:block;opacity:0.8;pointer-events:none}
+.card.sel .thumb{opacity:1}
+.name{font-size:9px;padding:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
+.c-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(45px,1fr));gap:4px}
+#modal,#ctx{position:fixed;background:rgba(0,0,0,0.95);z-index:999}
+#modal{inset:0;display:flex;align-items:center;justify-content:center}
+#ctx{padding:4px;border:1px solid #555;border-radius:4px;display:none;min-width:120px;box-shadow:0 4px 15px #000}
+#ctx div{padding:8px;cursor:pointer;font-size:11px;color:#eee}
+#ctx div:hover{background:var(--ac);color:#fff}
 </style>
 </head>
-<body>
-
-<div id="ui">
- <div class="row">
-  <strong style="color:#00d2ff;font-size:12px;margin-right:auto">OBS PUPPET</strong>
-  <button onclick="togUI()">Hide UI</button>
+<body data-theme="dark">
+<div id="stg" class="hide"></div>
+<div id="ctrl" class="hide">
+ <div class="head">
+  <h2>ORA puppet</h2>
+  <select id="th_sel">
+   <option value="dark">Dark</option>
+   <option value="grey">Grey</option>
+   <option value="light">Light</option>
+   <option value="blue">Blue</option>
+  </select>
  </div>
- <div class="row"><input type="file" id="inp" accept=".ora" style="font-size:10px;width:100%"></div>
- <div class="row">
-  <button id="mic">START MIC</button>
-  <button class="red" onclick="reset()">RESET</button>
+ <div class="scroll">
+  <div class="sect">
+   <span class="lbl">Library (Right-click to Delete)</span>
+   <div class="grid" id="lib"></div>
+   <button style="width:100%;margin-top:8px;background:var(--ac)" onclick="$('inp').click()">+ IMPORT ORA</button>
+   <input type="file" id="inp" accept=".ora" style="display:none">
+  </div>
+  <div class="sect">
+   <span class="lbl">Costumes</span>
+   <div id="c_list" class="c-grid"></div>
+  </div>
+  <div class="sect">
+   <span class="lbl">Settings</span>
+   <div class="row"><span>Thresh</span><input type="range" id="r_th" min="1" max="50"></div>
+   <div class="row"><span>Sway</span><input type="range" id="r_sw" min="0" max="100"></div>
+   <div class="row"><span>Bob</span><input type="range" id="r_bb" min="0" max="100"></div>
+  </div>
+  <button style="width:100%;opacity:0.2;border:none;margin-top:20px" onclick="$('modal').classList.remove('hide')">RESET DATABASE</button>
  </div>
- <div id="msg"></div>
- <div class="row" style="margin-top:8px;border-top:1px solid #444;padding-top:4px">
-  <div><label>Thresh</label><input type="range" id="r_th" min="1" max="50"></div>
-  <div><label>Sway</label><input type="range" id="r_sw" min="0" max="100"></div>
-  <div><label>Bob</label><input type="range" id="r_bb" min="0" max="100"></div>
- </div>
- <div class="row" id="c_btns"></div>
- <div style="font-size:9px;color:#666;margin-top:4px">Dbl-Click BG to Toggle UI</div>
- <div class="flags">FLAGS: --enable-media-stream --use-fake-ui-for-media-stream --allow-file-access-from-files --autoplay-policy=no-user-gesture-required</div>
 </div>
-
-<div id="stg"></div>
-
+<div id="modal" class="hide">
+ <div class="sect" style="width:220px;text-align:center;background:var(--bg)">
+  <p>Delete ALL saved puppets?</p>
+  <button onclick="confirmReset()" style="background:#a33">YES, CLEAR ALL</button>
+  <button onclick="$('modal').classList.add('hide')">CANCEL</button>
+ </div>
+</div>
+<div id="ctx"><div onclick="ctxDel()">Delete Avatar</div></div>
 <script>
 const $=i=>document.getElementById(i)
-const stg=$('stg'), ui=$('ui')
-let AC, AN, dat, files={}, root, pvt=[], eyes={o:[],c:[]}, mth={o:[],c:[]}
-let cfg={th:0.05, sw:1, bb:1, vol:0, smth:0, tlk:0, cst:-1, vis:1}
-let tm=0, nxtB=0, isB=0, isT=0, run=0, db=null
-
+const BUS=new BroadcastChannel('ora_puppet_v1')
+const MODE=new URLSearchParams(location.search).has('control')?'CTRL':'REND'
+let cfg={th:0.05,sw:1,bb:1,thm:'dark',cst:-1}
+let files={}, root, pvt=[], layers=[]
+let AC, AN, dat, vol=0, bobSmth=0, tlk=0, isT=0, isB=0, nxtB=0, db=null, loops=0, curID=null, ctxID=null
 window.onload=async()=>{
- let s=JSON.parse(localStorage.getItem('ora_cfg'))
- if(s){ 
-  cfg.th=s.th; $('r_th').value=s.th*100
-  cfg.sw=s.sw; $('r_sw').value=s.sw*30
-  cfg.bb=s.bb; $('r_bb').value=s.bb
-  cfg.cst=s.cst; cfg.vis=s.vis
-  if(!cfg.vis) ui.classList.add('min')
- } else {
-  $('r_th').value=10; $('r_sw').value=30; $('r_bb').value=50
- }
- 
- await initDB()
- let b=await getFile()
- if(b){ msg("Restoring...",1); proc(b) }
- startMic(1)
+    let s=JSON.parse(localStorage.getItem('p_sets_v1')); if(s) cfg={...cfg,...s}
+    document.documentElement.dataset.theme=cfg.thm
+    await initDB()
+    if(MODE=='CTRL') initCtrl()
+    else initRend()
 }
-
-document.body.ondblclick=e=>{ if(e.target==document.body||e.target==stg) togUI() }
-function togUI(){ 
- ui.classList.toggle('min'); cfg.vis=!ui.classList.contains('min'); save() 
+async function initCtrl(){
+    $('ctrl').classList.remove('hide'); syncUI()
+    $('th_sel').value=cfg.thm
+    $('th_sel').onchange=e=>{ cfg.thm=e.target.value; document.documentElement.dataset.theme=cfg.thm; saveCfg(); BUS.postMessage({t:'thm',v:cfg.thm}) }
+    $('inp').onchange=async e=>{
+        if(!e.target.files[0])return
+        const f=e.target.files[0], buf=await f.arrayBuffer(), {thumb, cList}=await parseMeta(buf)
+        const rec={id:Date.now(), name:f.name.replace('.ora',''), buf, thumb, cList, lastC:-1}
+        await putRec(rec); curID=rec.id; renderLib(); loadRemote(rec.id)
+    }
+    const S=(k,v)=>{ cfg[k]=v; saveCfg(); BUS.postMessage({t:'set',k,v}) }
+    $('r_th').oninput=e=>S('th',e.target.value/100)
+    $('r_sw').oninput=e=>S('sw',e.target.value/30)
+    $('r_bb').oninput=e=>S('bb',e.target.value)
+    window.oncontextmenu=e=>{ 
+        let card=e.target.closest('.card')
+        if(card){ e.preventDefault(); ctxID=Number(card.dataset.id); $('ctx').style.display='block'; $('ctx').style.left=e.pageX+'px'; $('ctx').style.top=e.pageY+'px' }
+    }
+    window.onclick=()=>$('ctx').style.display='none'
+    BUS.onmessage = e => { if(e.data.t === 'sync_req') sendSync() }
+    curID = await getMeta('last_id')
+    renderLib()
 }
-
-const save=()=>localStorage.setItem('ora_cfg',JSON.stringify({th:cfg.th, sw:cfg.sw, bb:cfg.bb, cst:cfg.cst, vis:cfg.vis}))
-$('r_th').oninput=e=>{ cfg.th=e.target.value/100; save() }
-$('r_sw').oninput=e=>{ cfg.sw=e.target.value/30; save() }
-$('r_bb').oninput=e=>{ cfg.bb=e.target.value; save() }
-$('inp').onchange=e=>{ if(e.target.files[0]){ proc(e.target.files[0]); putFile(e.target.files[0]) } }
-$('mic').onclick=()=>startMic(0)
-const msg=(t,ok)=>$('msg').innerHTML=`<div class="msg ${ok?'ok':'err'}">${t}</div>`
-
-async function startMic(au){
- try{
-  let s=null
-  if(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia) try{s=await navigator.mediaDevices.getUserMedia({audio:true})}catch(e){}
-  if(!s&&(navigator.webkitGetUserMedia||navigator.mozGetUserMedia)){
-    s=await new Promise((r,j)=>(navigator.webkitGetUserMedia||navigator.mozGetUserMedia).call(navigator,{audio:true},r,j))
-  }
-  if(!s) throw new Error("No Mic API")
-  AC=new(window.AudioContext||window.webkitAudioContext)()
-  AN=AC.createAnalyser(); AN.fftSize=512; AN.smoothingTimeConstant=0.3
-  AC.createMediaStreamSource(s).connect(AN)
-  dat=new Uint8Array(AN.frequencyBinCount)
-  if(AC.state==='suspended') await AC.resume()
-  $('mic').style.background='#28a745'; $('mic').innerText="MIC ON"
-  if(!au) msg("Mic Connected",1)
-  if(!run) loop()
- }catch(e){ if(!au) msg("Mic Failed. Check Flags.",0) }
+async function ctxDel(){ if(ctxID) { await delRec(ctxID); if(curID==ctxID) curID=null; renderLib(); ctxID=null } }
+function syncUI(){ $('r_th').value=cfg.th*100; $('r_sw').value=cfg.sw*30; $('r_bb').value=cfg.bb }
+const saveCfg=()=>localStorage.setItem('p_sets_v1',JSON.stringify(cfg))
+async function renderLib(){
+    let list=await getAll(); const g=$('lib'); g.innerHTML=''
+    list.sort((a,b)=>b.id-a.id).forEach(r=>{
+        let d=document.createElement('div'); d.className='card'+(r.id==curID?' sel':''); d.dataset.id=r.id
+        let u=r.thumb?URL.createObjectURL(r.thumb):''
+        d.innerHTML=`<img class="thumb" src="${u}" draggable="false"><div class="name">${r.name}</div>`
+        d.onclick=()=>{ curID=r.id; loadRemote(r.id); renderLib() }
+        g.append(d)
+    })
+    if(curID) getRec(curID).then(r=>r&&renderCostumes(r))
 }
-
-async function proc(b){
- try{
-  files=await unzip(await b.arrayBuffer())
-  if(!files['stack.xml']) throw new Error("Bad ORA")
-  build(new DOMParser().parseFromString(await files['stack.xml'].text(),"text/xml"))
-  msg("Ready",1)
- }catch(e){ msg(e.message,0) }
+function renderCostumes(rec){
+    const g=$('c_list'); g.innerHTML=''
+    let list=[-1, ...rec.cList.sort((a,b)=>a-b)]
+    list.forEach(c=>{
+        let b=document.createElement('button'); b.className='c-btn'+(rec.lastC==c?' act':'')
+        b.innerText=c==-1?'BASE':('C'+c)
+        b.onclick=()=>{ 
+            rec.lastC=c; cfg.cst=c; saveCfg(); putRec(rec)
+            BUS.postMessage({t:'cost', id:rec.id, c})
+            Array.from(g.children).forEach(x=>x.classList.remove('act')); b.classList.add('act') 
+        }
+        g.append(b)
+    })
 }
-
-async function build(doc){
- stg.innerHTML='', $('c_btns').innerHTML=''
- eyes={o:[],c:[]}, mth={o:[],c:[]}, pvt=[]
- let img=doc.getElementsByTagName('image')[0]
- let svg=document.createElementNS("http://www.w3.org/2000/svg","svg")
- svg.setAttribute("viewBox",`0 0 ${img.getAttribute('w')} ${img.getAttribute('h')}`)
- root=document.createElementNS("http://www.w3.org/2000/svg","g")
- svg.append(root)
-
- let nodes=[], pvC={}, cSet=new Set()
- const trav=n=>{
-  let ch=Array.from(n.children)
-  for(let i=ch.length-1;i>=0;i--) ch[i].tagName=='stack'?trav(ch[i]):ch[i].tagName=='layer'&&nodes.push(ch[i])
- }
- trav(img)
-
- nodes.forEach(n=>{
-  let nm=(n.getAttribute('name')||"").toLowerCase()
-  if(nm.startsWith('pivot_')) pvC[nm.replace('pivot_','').trim()]={x:+n.getAttribute('x')||0, y:+n.getAttribute('y')||0}
-  let cm=nm.match(/^c(\d)[_\s]/); if(cm)cSet.add(cm[1])
- })
-
- for(let n of nodes){
-  let nm=(n.getAttribute('name')||"").toLowerCase(), src=n.getAttribute('src')
-  if(nm.startsWith('pivot_')||!files[src])continue
-  let el=document.createElementNS("http://www.w3.org/2000/svg","image")
-  let u=URL.createObjectURL(files[src])
-  el.setAttribute('href',u); el.setAttribute('x',n.getAttribute('x')||0); el.setAttribute('y',n.getAttribute('y')||0)
-  let ti=new Image(); ti.src=u; await new Promise(r=>ti.onload=r)
-  el.setAttribute('width',ti.width); el.setAttribute('height',ti.height)
-  
-  let cm=nm.match(/^c(\d)[_\s]/); el.dataset.c=cm?cm[1]:'all'
-  if(nm.includes('eye')) nm.includes('close')?eyes.c.push(el):eyes.o.push(el)
-  if(nm.includes('mouth')) nm.includes('close')?mth.c.push(el):mth.o.push(el)
-  if(pvC[nm]){
-   el.style.transformBox="view-box"; el.style.transformOrigin=`${pvC[nm].x}px ${pvC[nm].y}px`
-   pvt.push({el, sp:1+Math.random(), off:Math.random()*10})
-  }
-  root.append(el)
- }
- Array.from(cSet).sort().forEach(id=>{
-  let b=document.createElement('button')
-  b.innerText='C'+id; b.onclick=()=>{cfg.cst=id; save(); setC(id)}
-  $('c_btns').append(b)
- })
- setC(cfg.cst!=-1?cfg.cst:(cSet.size>0?Array.from(cSet).sort()[0]:'all'))
- stg.append(svg)
+function loadRemote(id){ putMeta('last_id', id); BUS.postMessage({t:'load', id}) }
+function sendSync(){ if(curID) BUS.postMessage({t:'load', id:curID}); BUS.postMessage({t:'thm', v:cfg.thm}); BUS.postMessage({t:'set_all', cfg}) }
+function initRend(){
+    $('stg').classList.remove('hide')
+    getMeta('last_id').then(id=>{ if(id) loadAvatar(id) })
+    BUS.onmessage=async e=>{
+        let d=e.data
+        if(d.t=='set') cfg[d.k]=d.v
+        if(d.t=='set_all') cfg={...cfg,...d.cfg}
+        if(d.t=='thm') document.documentElement.dataset.theme=d.v
+        if(d.t=='load'){ putMeta('last_id',d.id); loadAvatar(d.id) }
+        if(d.t=='cost'){ cfg.cst=d.c; refreshFrame() }
+    }
+    BUS.postMessage({t:'sync_req'})
+    startMic()
 }
-
-function setC(id){
- if(!root)return
- root.querySelectorAll('image').forEach(e=>{
-  e.style.display=(e.dataset.c=='all'||e.dataset.c==id)?'block':'none'
- })
- Array.from($('c_btns').children).forEach(b=>b.classList.toggle('act',b.innerText=='C'+id))
+async function loadAvatar(id){
+    let r=await getRec(id); if(!r)return
+    curID=id; 
+    if(MODE=='CTRL') renderCostumes(r)
+    try{
+        files=await unzip(r.buf)
+        const doc = new DOMParser().parseFromString(await files['stack.xml'].text(),"text/xml")
+        await buildSVG(doc, r.lastC)
+    }catch(e){}
 }
-
-function initDB(){
- return new Promise((r,j)=>{
-  let q=indexedDB.open("OraDB",1)
-  q.onupgradeneeded=e=>e.target.result.createObjectStore("f")
-  q.onsuccess=e=>{db=e.target.result;r()}; q.onerror=j
- })
+async function buildSVG(doc, costumeID){
+    $('stg').innerHTML=''; layers=[]; pvt=[]
+    let imgTag=doc.getElementsByTagName('image')[0]
+    let svg=document.createElementNS("http://www.w3.org/2000/svg","svg")
+    svg.setAttribute("viewBox",`0 0 ${imgTag.getAttribute('w')} ${imgTag.getAttribute('h')}`)
+    root=document.createElementNS("http://www.w3.org/2000/svg","g")
+    svg.append(root)
+    let nodes=[], pvC={}
+    const trav=n=>{
+        let ch=Array.from(n.children); 
+        for(let i=ch.length-1;i>=0;i--) ch[i].tagName=='stack'?trav(ch[i]):ch[i].tagName=='layer'&&nodes.push(ch[i])
+    }
+    trav(imgTag)
+    nodes.forEach(n=>{
+        let nm=(n.getAttribute('name')||"").toLowerCase()
+        if(nm.startsWith('pivot_')) pvC[nm.replace('pivot_','').trim()]={x:+n.getAttribute('x')||0, y:+n.getAttribute('y')||0}
+    })
+    for(let n of nodes){
+        let nm=(n.getAttribute('name')||"").toLowerCase(), src=n.getAttribute('src')
+        if(nm.startsWith('pivot_')||!files[src])continue
+        let el=document.createElementNS("http://www.w3.org/2000/svg","image")
+        let u=URL.createObjectURL(files[src]); el.setAttribute('href',u)
+        el.setAttribute('x',n.getAttribute('x')||0); el.setAttribute('y',n.getAttribute('y')||0)
+        let ti=new Image(); ti.src=u; await new Promise(r=>ti.onload=r)
+        el.setAttribute('width',ti.width); el.setAttribute('height',ti.height)
+        let cm=nm.match(/^c(\d+)/i); el.dataset.cID = cm ? cm[1] : 'all'
+        if(nm.includes('eye')){
+            el.dataset.role = nm.includes('close') ? 'eye_c' : 'eye_o'
+        } else if(nm.includes('mouth')){
+            el.dataset.role = nm.includes('open') ? 'mth_o' : 'mth_c'
+        } else { el.dataset.role = 'base' }
+        if(pvC[nm]){ 
+            el.style.transformBox="view-box"; el.style.transformOrigin=`${pvC[nm].x}px ${pvC[nm].y}px`; 
+            pvt.push({el, sp:1+Math.random(), off:Math.random()*10}) 
+        }
+        root.append(el); layers.push(el)
+    }
+    cfg.cst = costumeID; refreshFrame(); if(!loops) loop(); $('stg').append(svg)
 }
-function putFile(b){ if(db) db.transaction(["f"],"readwrite").objectStore("f").put(b,"last") }
-function getFile(){ return new Promise(r=>{ if(!db)return r(0); let q=db.transaction(["f"]).objectStore("f").get("last"); q.onsuccess=()=>r(q.result); q.onerror=()=>r(0) }) }
-function reset(){ localStorage.removeItem('ora_cfg'); if(db) db.transaction(["f"],"readwrite").objectStore("f").clear(); location.reload() }
-
+function refreshFrame(){
+    if(!root) return
+    const talk = isT, open = !isB
+    layers.forEach(el => {
+        const isRightCostume = (el.dataset.cID === 'all' || el.dataset.cID == cfg.cst)
+        if(!isRightCostume) { el.style.display = 'none'; return }
+        const role = el.dataset.role
+        let visible = true
+        if(role === 'mth_o') visible = talk
+        else if(role === 'mth_c') visible = !talk
+        else if(role === 'eye_o') visible = open
+        else if(role === 'eye_c') visible = !open
+        el.style.display = visible ? 'block' : 'none'
+    })
+}
+async function startMic(){
+    try {
+        let s=await navigator.mediaDevices.getUserMedia({audio:true})
+        AC=new(window.AudioContext||window.webkitAudioContext)(); AN=AC.createAnalyser(); AN.fftSize=512; AN.smoothingTimeConstant=0.2
+        AC.createMediaStreamSource(s).connect(AN); dat=new Uint8Array(AN.frequencyBinCount); if(!loops) loop()
+    } catch(e) {}
+}
 function loop(ts){
- run=1
- if(AN){ AN.getByteFrequencyData(dat); let s=0; for(let i=5;i<50;i++)s+=dat[i]; cfg.vol=(s/45)/255 }
- let now=cfg.vol>cfg.th
- cfg.tlk+=( (now?1:0)-cfg.tlk)*0.1; cfg.smth+=(cfg.vol-cfg.smth)*0.2
- const ok=e=>e.dataset.c=='all'||e.dataset.c==cfg.cst
- 
- if(now!=isT){
-  isT=now; mth.o.forEach(e=>e.style.display=isT&&ok(e)?'block':'none'); mth.c.forEach(e=>e.style.display=!isT&&ok(e)?'block':'none')
- } else {
-  mth.o.forEach(e=>e.style.display=isT&&ok(e)?'block':'none'); mth.c.forEach(e=>e.style.display=!isT&&ok(e)?'block':'none')
- }
- 
- if(!isB&&ts>nxtB){
-  isB=1; eyes.o.forEach(e=>ok(e)&&(e.style.display='none')); eyes.c.forEach(e=>ok(e)&&(e.style.display='block'))
-  setTimeout(()=>{
-   isB=0; eyes.o.forEach(e=>ok(e)&&(e.style.display='block')); eyes.c.forEach(e=>ok(e)&&(e.style.display='none'))
-   nxtB=ts+2000+Math.random()*3000
-  },150)
- }
- let t=ts/1000
- pvt.forEach(p=>{
-  let b=Math.sin((t*p.sp)+p.off)*2*cfg.sw, tk=Math.sin((t*p.sp*3)+p.off)*(5*cfg.sw)*cfg.tlk
-  p.el.style.transform=`rotate(${b+tk}deg)`
- })
- if(root) root.style.transform=`translate(0,-${cfg.smth*50*cfg.bb}px)`
- requestAnimationFrame(loop)
+    loops=1; if(AN){ AN.getByteFrequencyData(dat); let s=0; for(let i=5;i<50;i++)s+=dat[i]; vol=(s/45)/255 }
+    let now=vol>cfg.th; tlk+=((now?1:0)-tlk)*0.1; let targetBob=now?vol:0; bobSmth+=(targetBob-bobSmth)*0.1
+    if(now!=isT){ isT=now; refreshFrame() }
+    if(!isB && ts>nxtB){
+        isB=1; refreshFrame(); 
+        setTimeout(()=>{ isB=0; refreshFrame(); nxtB=ts+2000+Math.random()*4000 }, 150)
+    }
+    let t=ts/1000; 
+    pvt.forEach(p=>{ p.el.style.transform=`rotate(${Math.sin((t*p.sp)+p.off)*2*cfg.sw + Math.sin((t*p.sp*3)+p.off)*(5*cfg.sw)*tlk}deg)` })
+    if(root) root.style.transform=`translate(0,-${bobSmth*15*cfg.bb}px)`
+    requestAnimationFrame(loop)
 }
-
+async function parseMeta(buf){
+    let f=await unzip(buf), t=null, c=new Set(); 
+    for(let k in f) if(k.toLowerCase().includes('thumb')) t=f[k]
+    if(f['stack.xml']){
+        let d=new DOMParser().parseFromString(await f['stack.xml'].text(),"text/xml"), l=d.getElementsByTagName('layer')
+        for(let n of l){ 
+            let m=(n.getAttribute('name')||"").match(/^c(\d+)/i); 
+            if(m) c.add(parseInt(m[1])) 
+        }
+    }
+    return {thumb:t, cList:Array.from(c)}
+}
+function initDB(){ return new Promise(r=>{ let q=indexedDB.open("Puppetv1",1); q.onupgradeneeded=e=>{let d=e.target.result; d.createObjectStore("recs",{keyPath:"id"}); d.createObjectStore("meta")}; q.onsuccess=e=>{db=e.target.result;r()} }) }
+function putRec(v){ return db.transaction(["recs"],"readwrite").objectStore("recs").put(v) }
+function getRec(id){ return new Promise(r=>{ if(!db)return r(null); db.transaction(["recs"]).objectStore("recs").get(id).onsuccess=e=>r(e.target.result) }) }
+function getAll(){ return new Promise(r=>{ if(!db)return r([]); db.transaction(["recs"]).objectStore("recs").getAll().onsuccess=e=>r(e.target.result) }) }
+function delRec(id){ return db.transaction(["recs"],"readwrite").objectStore("recs").delete(id) }
+function putMeta(k,v){ if(db) db.transaction(["meta"],"readwrite").objectStore("meta").put(v,k) }
+function getMeta(k){ return new Promise(r=>{ if(!db)return r(null); db.transaction(["meta"]).objectStore("meta").get(k).onsuccess=e=>r(e.target.result) }) }
+function confirmReset(){ indexedDB.deleteDatabase("Puppetv1"); localStorage.clear(); location.reload() }
 async function unzip(b){
- let v=new DataView(b),o=0,f={},td=new TextDecoder()
- while(o<v.byteLength){
-  if(v.getUint32(o,1)!=0x04034b50)break
-  let m=v.getUint16(o+8,1),cs=v.getUint32(o+18,1),nl=v.getUint16(o+26,1),xl=v.getUint16(o+28,1)
-  let n=td.decode(new Uint8Array(b,o+30,nl)), raw=new Uint8Array(b,o+30+nl+xl,cs)
-  if(m==0)f[n]=new Blob([raw])
-  else if(m==8) f[n]=await new Response(new Blob([raw]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).blob()
-  o+=30+nl+xl+cs
- }
- return f
+    let v=new DataView(b),o=0,f={},td=new TextDecoder()
+    while(o<v.byteLength){
+        if(v.getUint32(o,1)!=0x04034b50)break
+        let m=v.getUint16(o+8,1),cs=v.getUint32(o+18,1),nl=v.getUint16(o+26,1),xl=v.getUint16(o+28,1)
+        let n=td.decode(new Uint8Array(b,o+30,nl)), raw=new Uint8Array(b,o+30+nl+xl,cs)
+        if(m==0)f[n]=new Blob([raw])
+        else if(m==8) f[n]=await new Response(new Blob([raw]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).blob()
+        o+=30+nl+xl+cs
+    }
+    return f
 }
 </script></body></html>
