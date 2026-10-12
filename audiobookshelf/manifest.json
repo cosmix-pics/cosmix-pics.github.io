@@ -1,34 +1,39 @@
 {
-  "name": "audiobook shelf",
-  "short_name": "audiobook",
-  "description": "a simple audiobook shelf",
+  "name": "Audiobook Shelf",
+  "short_name": "Audiobooks",
+  "description": "A simple offline audiobook shelf player",
   "categories": ["books", "entertainment"],
   "orientation": "natural",
-  "id": "https://cosmix.pics/audiobookshelf/",
-  "start_url": ".",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#000000",
+  "background_color": "#1e1e1e",
+  "theme_color": "#1e1e1e",
   "screenshots": [
-  {
-    "src": "screenshot.webp",
-    "sizes": "891x1037",
-    "type": "image/webp"
-  }
-],
+    {
+      "src": "screenshot.webp",
+      "sizes": "891x1037",
+      "type": "image/webp"
+    }
+  ],
   "icons": [
     {
       "src": "icon-192x192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "icon-512x512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-1024x1024.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any"
     }
   ]
-
 }
-
-
